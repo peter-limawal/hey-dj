@@ -1,9 +1,19 @@
 import React, { useState } from 'react'
 import './App.css'
 
+const authorizeSpotify = async () => {
+  console.log('Authorize Spotify')
+  return true
+}
+
+const playSong = (songURI: string) => {
+  console.log('Play song:', songURI)
+}
+
 function App() {
   const [input, setInput] = useState('')
   const [songs, setSongs] = useState<string[]>([])
+  const [loggedIn, setLoggedIn] = useState(false)
 
   const handleSubmit = async () => {
     const response = await fetch('http://localhost:3001/input', {
@@ -19,9 +29,24 @@ function App() {
     setSongs(data.songs)
   }
 
-  return (
-    <div className="container">
+  const login = async () => {
+    let loginSuccessful = false
+    const success = await authorizeSpotify()
+    if (success) {
+      loginSuccessful = true
+    }
+    setLoggedIn(loginSuccessful)
+  }
+
+  const renderLoginLayer = () => (
+    <div className="login-layer">
       <h1>Hey DJ</h1>
+      {!loggedIn && <button onClick={login}>Login to Spotify</button>}
+    </div>
+  )
+
+  const renderAppLayer = () => (
+    <div className="app-layer">
       <input
         type="text"
         placeholder="Type your song request here"
@@ -30,7 +55,7 @@ function App() {
       />
       <button onClick={handleSubmit}>Submit</button>
       {songs.length > 0 && (
-        <div>
+        <div className="songs">
           <h2>Suggested Songs:</h2>
           <ul>
             {songs.map((song: string, index: number) => (
@@ -39,6 +64,12 @@ function App() {
           </ul>
         </div>
       )}
+    </div>
+  )
+
+  return (
+    <div className="container">
+      {loggedIn ? renderAppLayer() : renderLoginLayer()}
     </div>
   )
 }
