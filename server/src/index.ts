@@ -30,8 +30,16 @@ async function getSongListFromGPT(input: string): Promise<string[]> {
       messages: [
         {
           role: 'system',
-          content:
-            'You are an AI that can suggest a list of songs based on user input. Generate a list of 20 songs',
+          content: `You are an AI that can suggest a list of songs based on user input. Consistently generate a list of 20 songs following the "Song Name - Artist" format. Do not include any additional text, numbering, or variations in the output. Provide the list of songs in the exact format requested:
+
+          List 20 songs below:
+          
+          Song Name - Artist
+          Song Name - Artist
+          ...
+          Song Name - Artist
+                   
+          `,
         },
         {
           role: 'user',

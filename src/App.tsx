@@ -21,7 +21,7 @@ function App() {
 
   return (
     <div className="container">
-      <h1>AI DJ</h1>
+      <h1>Hey DJ</h1>
       <input
         type="text"
         placeholder="Type your song request here"
