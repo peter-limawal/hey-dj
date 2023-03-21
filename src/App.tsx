@@ -9,24 +9,32 @@ function App() {
 
   useEffect(() => {
     async function getToken() {
-      try {
-        const response = await fetch('/auth/token')
-        if (response.ok) {
-          const json = await response.json()
-          setToken(json.access_token)
-          localStorage.setItem('access_token', json.access_token)
-        } else {
-          console.error(
-            'Error fetching access token:',
-            response.status,
-            response.statusText
+      const getAccessTokenFromUrl = () => {
+        const queryString = window.location.search
+        const urlParams = new URLSearchParams(queryString)
+        return urlParams.get('access_token')
+      }
+
+      const accessTokenFromUrl = getAccessTokenFromUrl()
+      if (accessTokenFromUrl) {
+        console.log('Access token found in URL:', accessTokenFromUrl)
+        setToken(accessTokenFromUrl)
+        localStorage.setItem('access_token', accessTokenFromUrl)
+
+        // Remove the access token from the URL
+        const cleanUrl = window.location.href.split('?')[0]
+        window.history.replaceState({}, document.title, cleanUrl)
+      } else {
+        const accessTokenFromLocalStorage = localStorage.getItem('access_token')
+        if (accessTokenFromLocalStorage) {
+          console.log(
+            'Access token found in localStorage:',
+            accessTokenFromLocalStorage
           )
-          // Log the response text
-          const responseText = await response.text()
-          console.error('Response text:', responseText)
+          setToken(accessTokenFromLocalStorage)
+        } else {
+          console.log('Access token not found')
         }
-      } catch (error) {
-        console.error('Error fetching access token:', error)
       }
     }
 

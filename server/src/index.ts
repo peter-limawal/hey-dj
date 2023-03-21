@@ -3,6 +3,7 @@ import cors from 'cors'
 import { Configuration, OpenAIApi } from 'openai'
 import dotenv from 'dotenv'
 import querystring from 'querystring'
+import cookieParser from 'cookie-parser'
 import { URLSearchParams } from 'url'
 
 // node-fetch Dynamic Import
@@ -36,8 +37,9 @@ interface TokenResponse {
   refresh_token: string
 }
 
-app.use(cors())
+app.use(cors({ origin: 'http://localhost:5173', credentials: true }))
 app.use(express.json())
+app.use(cookieParser())
 
 app.get('/', (req, res) => {
   res.send('Hello from the backend server!')
@@ -133,18 +135,19 @@ app.get('/auth/callback', async (req, res) => {
   const code = req.query.code as string
 
   const authOptions = {
-    method: 'POST',
+    url: 'https://accounts.spotify.com/api/token',
+    form: new URLSearchParams({
+      code: code,
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code',
+    }),
     headers: {
       Authorization: `Basic ${Buffer.from(
         `${spotifyClientId}:${spotifyClientSecret}`
       ).toString('base64')}`,
       'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body: new URLSearchParams({
-      grant_type: 'authorization_code',
-      code,
-      redirect_uri: redirectUri,
-    }),
+    json: true,
   }
 
   try {
@@ -161,7 +164,8 @@ app.get('/auth/callback', async (req, res) => {
       // Save the access token and refresh token to userTokens
       userTokens['currentUser'] = { access_token, refresh_token }
 
-      res.redirect('/')
+      // Send the access token as a JSON object
+      res.json({ access_token })
     } else {
       res.redirect(
         '/?' +
@@ -177,11 +181,11 @@ app.get('/auth/callback', async (req, res) => {
 })
 
 app.get('/auth/token', (req, res) => {
-  const currentUserTokens = userTokens['currentUser']
+  const accessToken = req.cookies.access_token
 
-  if (currentUserTokens) {
+  if (accessToken) {
     res.json({
-      access_token: currentUserTokens.access_token,
+      access_token: accessToken,
     })
   } else {
     res.status(404).send('No access token found for the current user.')

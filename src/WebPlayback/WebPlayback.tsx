@@ -46,6 +46,34 @@ function WebPlayback(props: WebPlaybackProps) {
         }
       )
 
+      playerInstance.addListener(
+        'initialization_error',
+        ({ message }: { message: string }) => {
+          console.error('Initialization Error:', message)
+        }
+      )
+
+      playerInstance.addListener(
+        'authentication_error',
+        ({ message }: { message: string }) => {
+          console.error('Authentication Error:', message)
+        }
+      )
+
+      playerInstance.addListener(
+        'account_error',
+        ({ message }: { message: string }) => {
+          console.error('Account Error:', message)
+        }
+      )
+
+      playerInstance.addListener(
+        'playback_error',
+        ({ message }: { message: string }) => {
+          console.error('Playback Error:', message)
+        }
+      )
+
       playerInstance.connect()
     }
   }, [props.token])
