@@ -1,24 +1,40 @@
-import express from 'express'
+import express, { Request, Response } from 'express'
 import cors from 'cors'
 import { Configuration, OpenAIApi } from 'openai'
 import dotenv from 'dotenv'
 import querystring from 'querystring'
-import fetch from 'node-fetch'
+import { URLSearchParams } from 'url'
+
+// node-fetch Dynamic Import
+import { RequestInfo, RequestInit } from 'node-fetch'
+
+const fetch = (url: RequestInfo, init?: RequestInit) =>
+  import('node-fetch').then(({ default: fetch }) => fetch(url, init))
+
+const app = express()
+const port = process.env.PORT || 5000
 
 dotenv.config()
 
-const app = express()
-const port = process.env.PORT || 3001
-
-// OpenAI API key
+// OpenAI API Client
 const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
 })
 const openai = new OpenAIApi(configuration)
 
-const spotifyClientId = process.env.SPOTIFY_CLIENT_ID
-const spotifyClientSecret = process.env.SPOTIFY_CLIENT_SECRET
-const redirectUri = 'http://localhost:5173/auth/callback'
+// Spotify API Client
+const spotifyClientId = process.env.SPOTIFY_CLIENT_ID as string
+const spotifyClientSecret = process.env.SPOTIFY_CLIENT_SECRET as string
+const redirectUri = process.env.REDIRECT_URI as string
+
+// Token Interface
+interface TokenResponse {
+  access_token: string
+  token_type: string
+  scope: string
+  expires_in: number
+  refresh_token: string
+}
 
 app.use(cors())
 app.use(express.json())
@@ -92,13 +108,12 @@ function generateRandomString(length: number): string {
 app.get('/auth/login', (req, res) => {
   const scope = 'streaming user-read-email user-read-private'
   const state = generateRandomString(16)
-  const redirect_uri = 'http://localhost:3000/auth/callback'
 
   const auth_query_parameters = new URLSearchParams({
     response_type: 'code',
-    client_id: process.env.SPOTIFY_CLIENT_ID as string,
+    client_id: spotifyClientId,
     scope: scope,
-    redirect_uri: redirect_uri,
+    redirect_uri: redirectUri,
     state: state,
   })
 
@@ -117,59 +132,47 @@ const userTokens: Record<
 app.get('/auth/callback', async (req, res) => {
   const code = req.query.code as string
 
-  if (!code) {
-    res.status(400).send('Authorization code is missing.')
-    return
+  const authOptions = {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${Buffer.from(
+        `${spotifyClientId}:${spotifyClientSecret}`
+      ).toString('base64')}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: redirectUri,
+    }),
   }
 
   try {
-    const tokenResponse = await fetch(
+    const response = await fetch(
       'https://accounts.spotify.com/api/token',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Authorization: `Basic ${Buffer.from(
-            `${spotifyClientId}:${spotifyClientSecret}`
-          ).toString('base64')}`,
-        },
-        body: querystring.stringify({
-          grant_type: 'authorization_code',
-          code,
-          redirect_uri: redirectUri,
-        }),
-      }
+      authOptions
     )
 
-    const tokenData: {
-      access_token?: string
-      refresh_token?: string
-    } = (await tokenResponse.json()) as {
-      access_token?: string
-      refresh_token?: string
+    if (response.ok) {
+      const body = (await response.json()) as TokenResponse
+      const access_token = body.access_token
+      const refresh_token = body.refresh_token
+
+      // Save the access token and refresh token to userTokens
+      userTokens['currentUser'] = { access_token, refresh_token }
+
+      res.redirect('/')
+    } else {
+      res.redirect(
+        '/?' +
+          querystring.stringify({
+            error: 'invalid_token',
+          })
+      )
     }
-
-    const { access_token: accessToken, refresh_token: refreshToken } = tokenData
-
-    if (!accessToken || !refreshToken) {
-      res.status(400).send('Failed to obtain access token and refresh token.')
-      return
-    }
-
-    // Store the tokens
-    userTokens['currentUser'] = {
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    }
-
-    res.redirect(
-      `http://localhost:3000?access_token=${accessToken}&refresh_token=${refreshToken}`
-    )
   } catch (error) {
-    console.error('Error during token exchange:', error)
-    res
-      .status(500)
-      .send('Failed to exchange authorization code for access token.')
+    console.error('Error exchanging code for token:', error)
+    res.status(500).send('Error exchanging code for token')
   }
 })
 
