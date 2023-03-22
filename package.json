@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "client:dev": "vite",
+    "server:dev": "cd server && npm run dev",
+    "dev": "npm run client:dev && npm run server:dev",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },
