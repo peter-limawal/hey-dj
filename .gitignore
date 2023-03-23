@@ -23,5 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 
-# API keys
+# Config files
 .env
+hey-dj.code-workspace

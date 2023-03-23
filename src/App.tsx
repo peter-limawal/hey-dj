@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import Login from './Login'
 import './App.css'
 
 const authorizeSpotify = async () => {
@@ -38,12 +39,7 @@ function App() {
     setLoggedIn(loginSuccessful)
   }
 
-  const renderLoginLayer = () => (
-    <div className="login-layer">
-      <h1>Hey DJ</h1>
-      {!loggedIn && <button onClick={login}>Login to Spotify</button>}
-    </div>
-  )
+  const renderLoginLayer = () => <Login />
 
   const renderAppLayer = () => (
     <div className="app-layer">
