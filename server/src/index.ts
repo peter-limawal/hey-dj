@@ -12,19 +12,15 @@ dotenv.config()
 const app = express()
 const port = process.env.PORT || 5000
 
-// OpenAI API key
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
-})
-const openai = new OpenAIApi(configuration)
-
-// Spotify API keys
+// Initialize OpenAI API and Spotify credentials
+const openai = new OpenAIApi(
+  new Configuration({ apiKey: process.env.OPENAI_API_KEY })
+)
 const spotify_client_id = process.env.SPOTIFY_CLIENT_ID as string
 const spotify_client_secret = process.env.SPOTIFY_CLIENT_SECRET as string
-
-// Redirect URI
 const redirect_uri = process.env.REDIRECT_URI as string
 
+// Set up express middleware
 app.use(
   cors({
     origin: 'http://localhost:5173',
@@ -38,6 +34,7 @@ app.get('/', (req, res) => {
   res.send('Hello from the backend server!')
 })
 
+// Generate a random string for the state parameter
 const generateRandomString = function (length: number): string {
   let text = ''
   const possible =
@@ -49,6 +46,7 @@ const generateRandomString = function (length: number): string {
   return text
 }
 
+// Handle Spotify authentication
 app.get('/auth/login', (req, res) => {
   const scope =
     'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state'
@@ -97,15 +95,13 @@ app.get('/auth/callback', async (req, res) => {
         const access_token = response.data.access_token
         const expires_in = response.data.expires_in
 
-        console.log('Access token:', access_token) // Log the access token
-        console.log('Expires in:', expires_in) // Log the expiration time
-
         res.cookie('access_token', access_token, {
           maxAge: expires_in * 1000,
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production', // Secure only in production
+          secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax',
         })
+
         res.redirect('http://localhost:5173/')
       } else {
         console.error(
@@ -122,6 +118,7 @@ app.get('/auth/callback', async (req, res) => {
     })
 })
 
+// Get a song list from GPT
 async function getSongListFromGPT(input: string): Promise<string[]> {
   console.log('getSongListFromGPT called with input:', input)
 
@@ -152,9 +149,6 @@ async function getSongListFromGPT(input: string): Promise<string[]> {
       temperature: 0.8,
     })
 
-    // Log the raw response from the GPT API
-    console.log('GPT API response:', gptResponse.data)
-
     const songsText = gptResponse.data.choices[0].message?.content || ''
     const songs = songsText
       .split('\n')
@@ -167,6 +161,7 @@ async function getSongListFromGPT(input: string): Promise<string[]> {
   }
 }
 
+// Refresh the access token if it has expired
 const refreshTokenIfExpired = async (
   req: Request,
   res: Response,
@@ -232,6 +227,7 @@ const refreshTokenIfExpired = async (
   next()
 }
 
+// Return the access token
 app.get('/auth/token', refreshTokenIfExpired, (req, res) => {
   const stored_access_token = req.cookies.access_token || null
   res.json({
@@ -239,12 +235,14 @@ app.get('/auth/token', refreshTokenIfExpired, (req, res) => {
   })
 })
 
+// Handle song input and return the song list
 app.post('/input', refreshTokenIfExpired, async (req, res) => {
   const input = req.body.input
   const songs = await getSongListFromGPT(input)
   res.send({ songs })
 })
 
+// Start the server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`)
 })

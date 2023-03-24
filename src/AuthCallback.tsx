@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 
-const AuthCallback = () => {
+const AuthCallback: React.FC<{}> = () => {
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -21,7 +21,7 @@ const AuthCallback = () => {
           })
 
           // Redirect to the main page
-          navigate('http://localhost:5173/')
+          navigate('/')
         } catch (error) {
           console.error('Error exchanging code for token:', error)
         }

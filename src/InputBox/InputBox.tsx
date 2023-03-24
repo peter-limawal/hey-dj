@@ -8,6 +8,7 @@ interface InputBoxProps {
 export const InputBox: React.FC<InputBoxProps> = ({ onInputSubmit }) => {
   const [input, setInput] = useState('')
 
+  // Submit input value and reset the input field
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
     onInputSubmit(input)
