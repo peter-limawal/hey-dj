@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react'
 import WebPlayback from './WebPlayback'
 import Login from './Login'
 import './App.css'
+import axios from 'axios'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import AuthCallback from './AuthCallback'
 
 const App: React.FC<{}> = () => {
   // const [input, setInput] = useState('')
@@ -12,12 +15,20 @@ const App: React.FC<{}> = () => {
 
   useEffect(() => {
     async function getToken() {
-      const response = await fetch('http://localhost:5000/auth/token')
-      const json = await response.json()
-      if (json.access_token) {
-        setToken(json.access_token)
-      } else {
-        console.error('Failed to fetch the access token.')
+      try {
+        const response = await axios.get('http://localhost:5000/auth/token', {
+          withCredentials: true,
+        })
+        const json = response.data
+        console.log(response)
+        console.log(json.access_token)
+        if (json.access_token) {
+          setToken(json.access_token)
+        } else {
+          console.error('Failed to fetch the access token.')
+        }
+      } catch (error) {
+        console.error('Error fetching the access token:', error)
       }
     }
 
@@ -25,7 +36,7 @@ const App: React.FC<{}> = () => {
   }, [])
 
   // const handleSubmit = async () => {
-  //   const response = await fetch('http://localhost:3001/input', {
+  //   const response = await fetch('http://localhost:5000/input', {
   //     method: 'POST',
   //     headers: {
   //       'Content-Type': 'application/json',
@@ -61,10 +72,17 @@ const App: React.FC<{}> = () => {
   // )
 
   return (
-    <div className="container">
-      {token === '' ? <Login /> : <WebPlayback token={token} />}
-      {/* {token && renderAppLayer()} */}
-    </div>
+    <BrowserRouter>
+      <div className="container">
+        <Routes>
+          <Route
+            path="/"
+            element={token === '' ? <Login /> : <WebPlayback token={token} />}
+          />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+        </Routes>
+      </div>
+    </BrowserRouter>
   )
 }
 
