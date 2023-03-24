@@ -3,9 +3,12 @@ import './Login.css'
 
 const Login: React.FC<{}> = () => {
   return (
-    <div className="login">
-      <h1>Hey DJ</h1>
-      <a>Login with Spotify</a>
+    <div className="App">
+      <header className="App-header">
+        <a className="btn-spotify" href="http://localhost:5000/auth/login">
+          Login with Spotify
+        </a>
+      </header>
     </div>
   )
 }

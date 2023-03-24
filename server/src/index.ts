@@ -44,7 +44,8 @@ const generateRandomString = function (length: number): string {
 }
 
 app.get('/auth/login', (req, res) => {
-  const scope = 'streaming user-read-email user-read-private'
+  const scope =
+    'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state'
   const state = generateRandomString(16)
   const auth_query_parameters = new URLSearchParams({
     response_type: 'code',
@@ -89,7 +90,7 @@ app.get('/auth/callback', async (req, res) => {
       if (response.status === 200) {
         const access_token = response.data.access_token
         access_tokens.add(access_token) // Store the access token in the Set
-        res.redirect('/')
+        res.redirect('/') // Include the access_token as a query parameter
       } else {
         console.error(
           'Error in /auth/callback',
