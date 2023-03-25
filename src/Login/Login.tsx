@@ -5,7 +5,6 @@ const Login: React.FC<{}> = () => {
   return (
     <div className="App">
       <header className="App-header">
-        {/* Redirect to the server-side auth login route */}
         <a className="btn-spotify" href="http://localhost:5000/auth/login">
           Login with Spotify
         </a>

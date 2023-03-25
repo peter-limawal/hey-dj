@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import axios from 'axios'
-import AuthCallback from './AuthCallback'
+import {
+  BrowserRouter,
+  Route,
+  Routes,
+  useNavigate,
+  NavigateFunction,
+} from 'react-router-dom'
 import WebPlayback from './WebPlayback'
 import AppLayer from './AppLayer'
 import Login from './Login'
 import './App.css'
+import axios from 'axios'
 
 const App: React.FC<{}> = () => {
   const [input, setInput] = useState('')
@@ -13,25 +18,16 @@ const App: React.FC<{}> = () => {
   const [token, setToken] = useState('')
 
   useEffect(() => {
-    // Fetch access token from the backend
     async function getToken() {
-      try {
-        const response = await axios.get('http://localhost:5000/auth/token', {
-          withCredentials: true,
-        })
-        const json = response.data
-        console.log(response)
-        console.log(json.access_token)
-        if (json.access_token) {
+      await axios
+        .get('/auth/token')
+        .then((response) => {
+          const json = response.data
           setToken(json.access_token)
-          // Save the access token in local storage
-          localStorage.setItem('access_token', json.access_token)
-        } else {
-          console.error('Failed to fetch the access token.')
-        }
-      } catch (error) {
-        console.error('Error fetching the access token:', error)
-      }
+        })
+        .catch((error) => {
+          console.error('Error fetching access token:', error)
+        })
     }
 
     getToken()
@@ -60,7 +56,6 @@ const App: React.FC<{}> = () => {
             path="/"
             element={token === '' ? <Login /> : <WebPlayback token={token} />}
           />
-          <Route path="/auth/callback" element={<AuthCallback />} />
         </Routes>
         <AppLayer
           input={input}

@@ -1,11 +1,9 @@
-import express, { Request, Response, NextFunction } from 'express'
+import express, { Request, Response } from 'express'
 import cors from 'cors'
 import { Configuration, OpenAIApi } from 'openai'
 import dotenv from 'dotenv'
 import axios from 'axios'
-import cookieParser from 'cookie-parser'
 import { URLSearchParams } from 'url'
-import querystring from 'querystring'
 
 dotenv.config()
 
@@ -16,9 +14,12 @@ const port = process.env.PORT || 5000
 const openai = new OpenAIApi(
   new Configuration({ apiKey: process.env.OPENAI_API_KEY })
 )
-const spotify_client_id = process.env.SPOTIFY_CLIENT_ID as string
-const spotify_client_secret = process.env.SPOTIFY_CLIENT_SECRET as string
-const redirect_uri = process.env.REDIRECT_URI as string
+const spotifyClientID = process.env.SPOTIFY_CLIENT_ID as string
+const spotifyClientSecret = process.env.SPOTIFY_CLIENT_SECRET as string
+const redirectURI = process.env.REDIRECT_URI as string
+
+// In-memory storage for tokens
+var accessToken = ''
 
 // Set up express middleware
 app.use(
@@ -28,7 +29,6 @@ app.use(
   })
 )
 app.use(express.json())
-app.use(cookieParser())
 
 app.get('/', (req, res) => {
   res.send('Hello from the backend server!')
@@ -49,13 +49,13 @@ const generateRandomString = function (length: number): string {
 // Handle Spotify authentication
 app.get('/auth/login', (req, res) => {
   const scope =
-    'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state'
+    'streaming user-read-email user-read-private app-remote-control user-read-playback-state user-modify-playback-state'
   const state = generateRandomString(16)
   const auth_query_parameters = new URLSearchParams({
     response_type: 'code',
-    client_id: spotify_client_id,
+    client_id: spotifyClientID,
     scope: scope,
-    redirect_uri: redirect_uri,
+    redirect_uri: redirectURI,
     state: state,
   })
 
@@ -67,18 +67,17 @@ app.get('/auth/login', (req, res) => {
 
 app.get('/auth/callback', async (req, res) => {
   const code = req.query.code as string
-
-  const auth_options = {
+  const authOptions = {
     url: 'https://accounts.spotify.com/api/token',
     form: {
       code: code,
-      redirect_uri: redirect_uri,
+      redirect_uri: redirectURI,
       grant_type: 'authorization_code',
     },
     headers: {
       Authorization:
         'Basic ' +
-        Buffer.from(spotify_client_id + ':' + spotify_client_secret).toString(
+        Buffer.from(spotifyClientID + ':' + spotifyClientSecret).toString(
           'base64'
         ),
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -87,22 +86,15 @@ app.get('/auth/callback', async (req, res) => {
   }
 
   axios
-    .post(auth_options.url, new URLSearchParams(auth_options.form), {
-      headers: auth_options.headers,
+    .post(authOptions.url, new URLSearchParams(authOptions.form), {
+      headers: authOptions.headers,
     })
     .then((response) => {
       if (response.status === 200) {
-        const access_token = response.data.access_token
-        const expires_in = response.data.expires_in
+        accessToken = response.data.access_token
 
-        res.cookie('access_token', access_token, {
-          maxAge: expires_in * 1000,
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-        })
-
-        res.redirect('http://localhost:5173/')
+        // Redirect to the frontend
+        res.redirect('/')
       } else {
         console.error(
           'Error in /auth/callback',
@@ -161,82 +153,15 @@ async function getSongListFromGPT(input: string): Promise<string[]> {
   }
 }
 
-// Refresh the access token if it has expired
-const refreshTokenIfExpired = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  const stored_access_token = req.cookies.access_token || null
-  const stored_refresh_token = req.cookies.refresh_token || null
-  const stored_expiration_time = req.cookies.expires_at || 0
-
-  if (
-    stored_access_token &&
-    stored_refresh_token &&
-    stored_expiration_time &&
-    Date.now() > stored_expiration_time
-  ) {
-    const refresh_token = stored_refresh_token
-    const auth_options = {
-      url: 'https://accounts.spotify.com/api/token',
-      form: {
-        grant_type: 'refresh_token',
-        refresh_token: refresh_token,
-      },
-      headers: {
-        Authorization:
-          'Basic ' +
-          Buffer.from(spotify_client_id + ':' + spotify_client_secret).toString(
-            'base64'
-          ),
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      json: true,
-    }
-
-    try {
-      const response = await axios.post(
-        auth_options.url,
-        new URLSearchParams(auth_options.form),
-        {
-          headers: auth_options.headers,
-        }
-      )
-
-      if (response.status === 200) {
-        const new_access_token = response.data.access_token
-        const new_expiration_time = Date.now() + response.data.expires_in * 1000
-
-        res.cookie('access_token', new_access_token)
-        res.cookie('expires_at', new_expiration_time)
-        req.cookies.access_token = new_access_token
-        req.cookies.expires_at = new_expiration_time
-      } else {
-        console.error(
-          'Error in refreshTokenIfExpired',
-          response.status,
-          response.statusText
-        )
-      }
-    } catch (error) {
-      console.error('Error in refreshTokenIfExpired', error)
-    }
-  }
-
-  next()
-}
-
 // Return the access token
-app.get('/auth/token', refreshTokenIfExpired, (req, res) => {
-  const stored_access_token = req.cookies.access_token || null
+app.get('/auth/token', (req, res) => {
   res.json({
-    access_token: stored_access_token,
+    access_token: accessToken,
   })
 })
 
 // Handle song input and return the song list
-app.post('/input', refreshTokenIfExpired, async (req, res) => {
+app.post('/input', async (req, res) => {
   const input = req.body.input
   const songs = await getSongListFromGPT(input)
   res.send({ songs })
