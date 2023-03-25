@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { IconButton } from '@mui/material'
 import SkipPreviousRoundedIcon from '@mui/icons-material/SkipPreviousRounded'
 import PlayCircleRoundedIcon from '@mui/icons-material/PlayCircleRounded'
@@ -25,7 +25,7 @@ const track = {
 }
 
 const WebPlayback: React.FC<WebPlaybackProps> = ({ token }) => {
-  const playerRef = useRef<Spotify.Player | null>(null)
+  const [player, setPlayer] = useState<Spotify.Player | undefined>(undefined)
   const [is_paused, setPaused] = useState(false)
   const [is_active, setActive] = useState(false)
   const [current_track, setTrack] = useState(track)
@@ -39,7 +39,7 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({ token }) => {
 
     // Initialize the Spotify Web Playback SDK when it's ready
     window.onSpotifyWebPlaybackSDKReady = () => {
-      const player = new Spotify.Player({
+      const newPlayer = new Spotify.Player({
         name: 'Web Playback SDK',
         getOAuthToken: (cb) => {
           cb(token)
@@ -47,46 +47,52 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({ token }) => {
         volume: 1,
       })
 
-      playerRef.current = player
-
-      // Add listeners to handle various events
-      player.addListener('ready', ({ device_id }) => {
-        console.log('Ready with Device ID', device_id)
-      })
-
-      player.addListener('not_ready', ({ device_id }) => {
-        console.log('Device ID has gone offline', device_id)
-      })
-
-      player.addListener('initialization_error', ({ message }) => {
-        console.error(message)
-      })
-
-      player.addListener('authentication_error', ({ message }) => {
-        console.error(message)
-      })
-
-      player.addListener('account_error', ({ message }) => {
-        console.error(message)
-      })
-
-      player.addListener('player_state_changed', (state) => {
-        if (!state) {
-          return
-        }
-
-        setTrack(state.track_window.current_track)
-        setPaused(state.paused)
-
-        player.getCurrentState().then((state) => {
-          !state ? setActive(false) : setActive(true)
-        })
-      })
-
       // Connect the player to Spotify
-      player.connect()
+      newPlayer.connect().then((connected) => {
+        if (connected) {
+          setPlayer(newPlayer)
+        }
+      })
     }
   }, [])
+
+  useEffect(() => {
+    if (!player) return
+
+    // Add listeners to handle various events
+    player.addListener('ready', ({ device_id }) => {
+      console.log('Ready with Device ID', device_id)
+    })
+
+    player.addListener('not_ready', ({ device_id }) => {
+      console.log('Device ID has gone offline', device_id)
+    })
+
+    player.addListener('initialization_error', ({ message }) => {
+      console.error(message)
+    })
+
+    player.addListener('authentication_error', ({ message }) => {
+      console.error(message)
+    })
+
+    player.addListener('account_error', ({ message }) => {
+      console.error(message)
+    })
+
+    player.addListener('player_state_changed', (state) => {
+      if (!state) {
+        return
+      }
+
+      setTrack(state.track_window.current_track)
+      setPaused(state.paused)
+
+      player.getCurrentState().then((state) => {
+        !state ? setActive(false) : setActive(true)
+      })
+    })
+  }, [player])
 
   if (!is_active) {
     return (
@@ -94,8 +100,7 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({ token }) => {
         <div className="container">
           <div className="main-wrapper">
             <b>
-              {' '}
-              Instance not active. Transfer your playback using your Spotify app{' '}
+              Instance not active. Transfer your playback using your Spotify app
             </b>
           </div>
         </div>
@@ -123,7 +128,7 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({ token }) => {
               className="btn-spotify"
               onClick={() => {
                 console.log('Previous track button clicked')
-                playerRef.current!.previousTrack().catch((error) => {
+                player?.previousTrack().catch((error) => {
                   console.error('Error in previousTrack:', error)
                 })
               }}
@@ -134,7 +139,7 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({ token }) => {
               className="btn-spotify"
               onClick={() => {
                 console.log('Toggle play button clicked')
-                playerRef.current!.togglePlay().catch((error) => {
+                player?.togglePlay().catch((error) => {
                   console.error('Error in togglePlay:', error)
                 })
               }}
@@ -150,7 +155,7 @@ const WebPlayback: React.FC<WebPlaybackProps> = ({ token }) => {
               className="btn-spotify"
               onClick={() => {
                 console.log('Next track button clicked')
-                playerRef.current!.nextTrack().catch((error) => {
+                player?.nextTrack().catch((error) => {
                   console.error('Error in nextTrack:', error)
                 })
               }}
