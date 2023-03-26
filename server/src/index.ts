@@ -1,24 +1,84 @@
 import express from 'express'
 import cors from 'cors'
-import { Configuration, OpenAIApi } from 'openai'
 import dotenv from 'dotenv'
+import SpotifyWebApi from 'spotify-web-api-node'
+import { Configuration, OpenAIApi } from 'openai'
 
 dotenv.config()
 
 const app = express()
-const port = process.env.PORT || 3001
+const port = process.env.PORT || 5000
 
-// OpenAI API key
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
+// Initialize OpenAI API and Spotify credentials
+const openai = new OpenAIApi(
+  new Configuration({ apiKey: process.env.OPENAI_API_KEY })
+)
+const spotifyClientID = process.env.SPOTIFY_CLIENT_ID as string
+const spotifyClientSecret = process.env.SPOTIFY_CLIENT_SECRET as string
+const redirectURI = process.env.REDIRECT_URI as string
+
+// Initialize Spotify API
+const spotifyApi = new SpotifyWebApi({
+  clientId: process.env.SPOTIFY_CLIENT_ID,
+  clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+  redirectUri: process.env.REDIRECT_URI,
 })
-const openai = new OpenAIApi(configuration)
 
-app.use(cors())
+// Set up express middleware
+app.use(
+  cors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+  })
+)
 app.use(express.json())
 
 app.get('/', (req, res) => {
   res.send('Hello from the backend server!')
+})
+
+// Generate a random string for the state parameter
+const generateRandomString = function (length: number): string {
+  let text = ''
+  const possible =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+
+  for (let i = 0; i < length; i++) {
+    text += possible.charAt(Math.floor(Math.random() * possible.length))
+  }
+  return text
+}
+
+// Handle Spotify authentication
+app.get('/auth/login', (req, res) => {
+  console.log('test')
+  const scopes = [
+    'streaming',
+    'user-read-email',
+    'user-read-private',
+    'app-remote-control',
+    'user-read-playback-state',
+    'user-modify-playback-state',
+  ]
+  const state = generateRandomString(16)
+  res.redirect(spotifyApi.createAuthorizeURL(scopes, state))
+})
+
+app.get('/auth/callback', async (req, res) => {
+  const code = req.query.code as string
+  spotifyApi
+    .authorizationCodeGrant(code)
+    .then((data: any) => {
+      res.json({
+        accessToken: data.body.access_token,
+        refreshToken: data.body.refresh_token,
+        expiresIn: data.body.expires_in,
+      })
+    })
+    .catch((error) => {
+      console.error('Error in /auth/callback', error)
+      res.status(500).send('Internal Server Error')
+    })
 })
 
 async function getSongListFromGPT(input: string): Promise<string[]> {
