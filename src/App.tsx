@@ -4,14 +4,18 @@ import Dashboard from './Dashboard'
 import useAuth from './useAuth'
 import Login from './Login'
 import './App.css'
+import bartGif from './assets/bart.gif'
 
 const App: React.FC<{}> = () => {
   const { accessToken, refreshToken, expiresIn } = useAuth()
 
   return (
     <BrowserRouter>
+      <header className="app-header">
+        <h2>Hey DJ</h2>
+      </header>
       <div className="container">
-        <h1>Hey DJ</h1>
+        <img className="bart-gif" src={bartGif} alt="bart" />
         <Routes>
           <Route
             path="/"

@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import axios from 'axios'
 import InputBox from '../InputBox'
 import SpotifyWebPlayback from 'react-spotify-web-playback'
+import { spotifyWebPlayerStyles } from './SpotifyWebPlayerStyles'
+import './Dashboard.css'
 
 interface DashboardProps {
   accessToken: string | null
@@ -32,24 +34,24 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div>
-      <h1>Dashboard</h1>
-      {accessToken && (
-        <SpotifyWebPlayback
-          token={accessToken}
-          uris={trackURIs}
-          autoPlay={true}
-          play={trackURIs.length > 0}
-        />
-      )}
+      <div className="web-playback-wrapper">
+        {accessToken && (
+          <SpotifyWebPlayback
+            token={accessToken}
+            uris={trackURIs}
+            autoPlay={true}
+            play={trackURIs.length > 0}
+            name="Hey DJ - AI Music Curator"
+            styles={spotifyWebPlayerStyles}
+          />
+        )}
+      </div>
       <InputBox onInputSubmit={handleInputSubmit} />
       <div className="song-list">
         {songs.map((song, index) => (
           <p key={index}>{song}</p>
         ))}
       </div>
-      <p>accessToken: {accessToken ? accessToken : 'Not available'}</p>
-      <p>refreshToken: {refreshToken ? refreshToken : 'Not available'}</p>
-      <p>expiresIn: {expiresIn ? expiresIn : 'Not available'}</p>
     </div>
   )
 }
