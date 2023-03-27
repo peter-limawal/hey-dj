@@ -4,13 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "npm-run-all --parallel client:dev server:dev",
     "client:dev": "vite",
-    "build": "tsc && vite build",
+    "server:dev": "nodemon --exec ts-node-esm server/src/index.ts",
+    "dev": "npm-run-all --parallel client:dev server:dev",
+    "client:build": "vite build --outDir server/dist",
+    "build": "tsc && npm run client:build",
     "preview": "vite preview",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "ts-node server/src/index.ts",
-    "server:dev": "nodemon --exec ts-node-esm server/src/index.ts"
+    "start": "ts-node server/src/index.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.10.6",
