@@ -6,24 +6,7 @@ import Login from './Login'
 import './App.css'
 
 const App: React.FC<{}> = () => {
-  const [input, setInput] = useState('')
-  const [songs, setSongs] = useState<string[]>([])
-
   const { accessToken, refreshToken, expiresIn } = useAuth()
-
-  const handleSubmit = async () => {
-    const response = await fetch('http://localhost:5000/input', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ input }),
-    })
-
-    const data = await response.json()
-    console.log(data)
-    setSongs(data.songs)
-  }
 
   return (
     <BrowserRouter>

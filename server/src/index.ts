@@ -204,9 +204,57 @@ async function getSongListFromGPT(input: string): Promise<string[]> {
 
 app.post('/input', async (req, res) => {
   const input = req.body.input
+  const accessToken = req.body.accessToken
   const songs = await getSongListFromGPT(input)
-  res.send({ songs })
+  const trackURIs = await searchTracks(accessToken, songs.slice(1)) // Exclude the first item
+  res.send({ songs, trackURIs })
 })
+
+function parseTrackInfo(
+  track: string
+): { title: string; artist: string } | null {
+  const match = track.match(/^\d+\.?\s?(.+)\s-\s(.+)$/)
+
+  if (match && match.length === 3) {
+    const title = match[1].trim()
+    const artist = match[2].trim()
+    return { title, artist }
+  }
+
+  return null
+}
+
+async function searchTracks(
+  accessToken: string,
+  tracks: string[]
+): Promise<string[]> {
+  spotifyApi.setAccessToken(accessToken)
+
+  const trackURIs: string[] = []
+
+  for (const track of tracks) {
+    const trackInfo = parseTrackInfo(track)
+
+    if (trackInfo) {
+      const { title, artist } = trackInfo
+      const searchQuery = `track:${title} artist:${artist}`
+
+      try {
+        console.log(searchQuery)
+        const result = await spotifyApi.searchTracks(searchQuery, { limit: 1 })
+        const trackItem = result.body.tracks?.items[0]
+
+        if (trackItem) {
+          trackURIs.push(trackItem.uri)
+        }
+      } catch (error) {
+        console.error(`Error searching for track "${searchQuery}":`, error)
+      }
+    }
+  }
+
+  return trackURIs
+}
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`)
