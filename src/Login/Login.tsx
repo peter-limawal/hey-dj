@@ -3,12 +3,17 @@ import './Login.css'
 
 const Login: React.FC<{}> = () => {
   return (
-    <div className="App">
-      <header className="App-header">
-        <a className="btn-spotify" href="http://localhost:5000/auth/login">
-          Login with Spotify
-        </a>
-      </header>
+    <div className="login-container">
+      <h1>Hey DJ</h1>
+      <p>
+        Hey DJ is a web app that generates a playlist based on your mood or
+        preferences. Simply login with your Spotify account, and then describe
+        your desired music. Our AI will generate a playlist for you to enjoy!
+      </p>
+      {/* Redirect to the server-side auth login route */}
+      <a className="btn-spotify" href="/auth/login">
+        Login with Spotify
+      </a>
     </div>
   )
 }

@@ -1,40 +1,16 @@
 import express, { Request, Response } from 'express'
 import cors from 'cors'
-import { Configuration, OpenAIApi } from 'openai'
 import dotenv from 'dotenv'
-import axios from 'axios'
-import { URLSearchParams } from 'url'
+import session from 'express-session'
+import SpotifyWebApi from 'spotify-web-api-node'
+import { Configuration, OpenAIApi } from 'openai'
 
 dotenv.config()
 
-const app = express()
+const app = express().disable('x-powered-by')
 const port = process.env.PORT || 5000
 
-// Initialize OpenAI API and Spotify credentials
-const openai = new OpenAIApi(
-  new Configuration({ apiKey: process.env.OPENAI_API_KEY })
-)
-const spotifyClientID = process.env.SPOTIFY_CLIENT_ID as string
-const spotifyClientSecret = process.env.SPOTIFY_CLIENT_SECRET as string
-const redirectURI = process.env.REDIRECT_URI as string
-
-// In-memory storage for tokens
-var accessToken = ''
-
-// Set up express middleware
-app.use(
-  cors({
-    origin: 'http://localhost:5173',
-    credentials: true,
-  })
-)
-app.use(express.json())
-
-app.get('/', (req, res) => {
-  res.send('Hello from the backend server!')
-})
-
-// Generate a random string for the state parameter
+// Generate a random string based on a number
 const generateRandomString = function (length: number): string {
   let text = ''
   const possible =
@@ -46,63 +22,83 @@ const generateRandomString = function (length: number): string {
   return text
 }
 
+// Initialize OpenAI API and Spotify credentials
+const openai = new OpenAIApi(
+  new Configuration({ apiKey: process.env.OPENAI_API_KEY })
+)
+const spotifyClientID = process.env.SPOTIFY_CLIENT_ID as string
+const spotifyClientSecret = process.env.SPOTIFY_CLIENT_SECRET as string
+const redirectURI = process.env.REDIRECT_URI as string
+
+// Initialize Spotify API
+const spotifyApi = new SpotifyWebApi({
+  clientId: spotifyClientID,
+  clientSecret: spotifyClientSecret,
+  redirectUri: redirectURI,
+})
+
+// Set up express middleware
+app.use(
+  cors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+  })
+)
+
+// Set up express-session middleware
+const sessionSecret = generateRandomString(64)
+app.use(
+  session({
+    secret: sessionSecret,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 3600000, // 1 hour in milliseconds
+    },
+  })
+)
+
+app.use(express.json())
+
+// Augment express-session with a custom SessionData object
+declare module 'express-session' {
+  interface SessionData {
+    accessToken: string
+    refreshToken: string
+    expiresIn: number
+  }
+}
+
+app.get('/', (req, res) => {
+  res.send('Hello from the backend server!')
+})
+
 // Handle Spotify authentication
 app.get('/auth/login', (req, res) => {
-  const scope =
-    'streaming user-read-email user-read-private app-remote-control user-read-playback-state user-modify-playback-state'
+  const scopes = [
+    'streaming',
+    'user-read-email',
+    'user-read-private',
+    'app-remote-control',
+    'user-read-playback-state',
+    'user-modify-playback-state',
+  ]
   const state = generateRandomString(16)
-  const auth_query_parameters = new URLSearchParams({
-    response_type: 'code',
-    client_id: spotifyClientID,
-    scope: scope,
-    redirect_uri: redirectURI,
-    state: state,
-  })
-
-  res.redirect(
-    'https://accounts.spotify.com/authorize/?' +
-      auth_query_parameters.toString()
-  )
+  res.redirect(spotifyApi.createAuthorizeURL(scopes, state))
+  console.log('Redirecting to Spotify')
 })
 
 app.get('/auth/callback', async (req, res) => {
   const code = req.query.code as string
-  const authOptions = {
-    url: 'https://accounts.spotify.com/api/token',
-    form: {
-      code: code,
-      redirect_uri: redirectURI,
-      grant_type: 'authorization_code',
-    },
-    headers: {
-      Authorization:
-        'Basic ' +
-        Buffer.from(spotifyClientID + ':' + spotifyClientSecret).toString(
-          'base64'
-        ),
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    json: true,
-  }
+  spotifyApi
+    .authorizationCodeGrant(code)
+    .then((data: any) => {
+      // Save the tokens and expiration time in the session
+      req.session.accessToken = data.body.access_token
+      req.session.refreshToken = data.body.refresh_token
+      req.session.expiresIn = data.body.expires_in
 
-  axios
-    .post(authOptions.url, new URLSearchParams(authOptions.form), {
-      headers: authOptions.headers,
-    })
-    .then((response) => {
-      if (response.status === 200) {
-        accessToken = response.data.access_token
-
-        // Redirect to the frontend
-        res.redirect('/')
-      } else {
-        console.error(
-          'Error in /auth/callback',
-          response.status,
-          response.statusText
-        )
-        res.status(response.status).send(response.statusText)
-      }
+      res.redirect('/')
     })
     .catch((error) => {
       console.error('Error in /auth/callback', error)
@@ -110,7 +106,57 @@ app.get('/auth/callback', async (req, res) => {
     })
 })
 
-// Get a song list from GPT
+app.get('/auth/token', (req, res) => {
+  if (
+    req.session.accessToken &&
+    req.session.refreshToken &&
+    req.session.expiresIn
+  ) {
+    res.json({
+      accessToken: req.session.accessToken,
+      refreshToken: req.session.refreshToken,
+      expiresIn: req.session.expiresIn,
+    })
+  } else {
+    res.status(401).json({ error: 'Not authenticated' })
+  }
+})
+
+app.post('/auth/refresh', async (req, res) => {
+  const refreshToken = req.body.refreshToken as string
+
+  if (!refreshToken) {
+    res.status(400).json({ error: 'Refresh token is missing' })
+    return
+  }
+
+  spotifyApi.setRefreshToken(refreshToken)
+
+  spotifyApi
+    .refreshAccessToken()
+    .then((data) => {
+      const accessToken = data.body.access_token
+      const expiresIn = data.body.expires_in
+      const newRefreshToken = data.body.refresh_token
+
+      req.session.accessToken = accessToken
+      req.session.expiresIn = expiresIn
+      // Update the refresh token if a new one is provided
+      if (newRefreshToken) {
+        req.session.refreshToken = newRefreshToken
+      }
+      res.json({
+        accessToken,
+        refreshToken: newRefreshToken || refreshToken,
+        expiresIn,
+      })
+    })
+    .catch((error) => {
+      console.error('Error in /auth/refresh', error)
+      res.status(500).send('Internal Server Error')
+    })
+})
+
 async function getSongListFromGPT(input: string): Promise<string[]> {
   console.log('getSongListFromGPT called with input:', input)
 
@@ -163,11 +209,58 @@ app.get('/auth/token', (req, res) => {
 // Handle song input and return the song list
 app.post('/input', async (req, res) => {
   const input = req.body.input
+  const accessToken = req.body.accessToken
   const songs = await getSongListFromGPT(input)
-  res.send({ songs })
+  const trackURIs = await searchTracks(accessToken, songs.slice(1)) // Exclude the first item
+  res.send({ songs, trackURIs })
 })
 
-// Start the server
+function parseTrackInfo(
+  track: string
+): { title: string; artist: string } | null {
+  const match = track.match(/^\d+\.?\s?(.+)\s-\s(.+)$/)
+
+  if (match && match.length === 3) {
+    const title = match[1].trim()
+    const artist = match[2].trim()
+    return { title, artist }
+  }
+
+  return null
+}
+
+async function searchTracks(
+  accessToken: string,
+  tracks: string[]
+): Promise<string[]> {
+  spotifyApi.setAccessToken(accessToken)
+
+  const trackURIs: string[] = []
+
+  for (const track of tracks) {
+    const trackInfo = parseTrackInfo(track)
+
+    if (trackInfo) {
+      const { title, artist } = trackInfo
+      const searchQuery = `track:${title} artist:${artist}`
+
+      try {
+        console.log(searchQuery)
+        const result = await spotifyApi.searchTracks(searchQuery, { limit: 1 })
+        const trackItem = result.body.tracks?.items[0]
+
+        if (trackItem) {
+          trackURIs.push(trackItem.uri)
+        }
+      } catch (error) {
+        console.error(`Error searching for track "${searchQuery}":`, error)
+      }
+    }
+  }
+
+  return trackURIs
+}
+
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`)
 })

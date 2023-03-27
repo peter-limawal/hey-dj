@@ -5,7 +5,7 @@ interface InputBoxProps {
   onInputSubmit: (input: string) => void
 }
 
-export const InputBox: React.FC<InputBoxProps> = ({ onInputSubmit }) => {
+const InputBox: React.FC<InputBoxProps> = ({ onInputSubmit }) => {
   const [input, setInput] = useState('')
 
   // Submit input value and reset the input field

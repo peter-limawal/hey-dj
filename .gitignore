@@ -23,6 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 
-# Config files
+# Environment variables
 .env
 hey-dj.code-workspace

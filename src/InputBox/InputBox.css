@@ -24,14 +24,14 @@
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: #1db954;
   border: 1px solid transparent;
   border-radius: 8px;
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: background-color 0.25s;
   color: #ffffff;
 }
 
 .submit-button:hover {
-  border-color: #1db954;
+  background-color: #1ed760;
 }
