@@ -1,13 +1,15 @@
 import React, { useState } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import Dashboard from './Dashboard'
+import useAuth from './useAuth'
 import Login from './Login'
 import './App.css'
 
-function App() {
+const App: React.FC<{}> = () => {
   const [input, setInput] = useState('')
   const [songs, setSongs] = useState<string[]>([])
 
-  const [token, setToken] = useState('')
+  const { accessToken, refreshToken, expiresIn } = useAuth()
 
   const handleSubmit = async () => {
     const response = await fetch('http://localhost:5000/input', {
@@ -28,30 +30,21 @@ function App() {
       <div className="container">
         <h1>Hey DJ</h1>
         <Routes>
-          <Route path="/" element={<Login />} />
-          {/* <Route
+          <Route
             path="/"
-            element={token === '' ? <Login /> : <WebPlayback token={token} />}
-          /> */}
-          {/* <Route path="/auth/callback" element={<AuthCallback />} /> */}
+            element={
+              !accessToken ? (
+                <Login />
+              ) : (
+                <Dashboard
+                  accessToken={accessToken}
+                  refreshToken={refreshToken}
+                  expiresIn={expiresIn}
+                />
+              )
+            }
+          />
         </Routes>
-        {/* <input
-          type="text"
-          placeholder="Type your song request here"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-        />
-        <button onClick={handleSubmit}>Submit</button>
-        {songs.length > 0 && (
-          <div>
-            <h2>Suggested Songs:</h2>
-            <ul>
-              {songs.map((song: string, index: number) => (
-                <li key={index}>{song}</li>
-              ))}
-            </ul>
-          </div>
-        )} */}
       </div>
     </BrowserRouter>
   )
