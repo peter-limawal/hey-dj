@@ -8,7 +8,6 @@ interface InputBoxProps {
 const InputBox: React.FC<InputBoxProps> = ({ onInputSubmit }) => {
   const [input, setInput] = useState('')
 
-  // Submit input value and reset the input field
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
     onInputSubmit(input)
@@ -26,6 +25,7 @@ const InputBox: React.FC<InputBoxProps> = ({ onInputSubmit }) => {
         value={input}
         onChange={(event) => setInput(event.target.value)}
         className="input-field"
+        placeholder="Try: I'm feeling happy!"
       />
       <button type="submit" className="submit-button">
         Submit

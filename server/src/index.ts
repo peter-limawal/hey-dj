@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express'
+import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import session from 'express-session'
@@ -187,6 +187,9 @@ async function getSongListFromGPT(input: string): Promise<string[]> {
       temperature: 0.8,
     })
 
+    // Log the raw response from the GPT API
+    console.log('GPT API response:', gptResponse.data)
+
     const songsText = gptResponse.data.choices[0].message?.content || ''
     const songs = songsText
       .split('\n')
@@ -199,14 +202,6 @@ async function getSongListFromGPT(input: string): Promise<string[]> {
   }
 }
 
-// Return the access token
-app.get('/auth/token', (req, res) => {
-  res.json({
-    access_token: accessToken,
-  })
-})
-
-// Handle song input and return the song list
 app.post('/input', async (req, res) => {
   const input = req.body.input
   const accessToken = req.body.accessToken

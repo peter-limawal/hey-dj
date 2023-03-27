@@ -1,11 +1,3 @@
-body {
-  font-family: 'Roboto', sans-serif;
-  background-color: #2c2c2c; /* ChatGPT grey */
-  color: #ffffff;
-  margin: 0;
-  padding: 0;
-}
-
 .container {
   display: flex;
   flex-direction: column;
@@ -30,14 +22,11 @@ h1 {
 input {
   font-size: 1.2rem;
   padding: 0.5rem 1rem;
-  border: 1px solid #1db954; /* Spotify green */
+  border: 1px solid #ccc;
   border-radius: 4px;
-  background-color: #2c2c2c;
-  color: #ffffff;
   width: 100%;
   box-sizing: border-box;
   margin-bottom: 1rem;
-  outline: none;
 }
 
 .app-header {
@@ -54,69 +43,4 @@ input {
   width: 100%;
   max-width: 300px;
   margin-bottom: 2rem;
-}
-
-h2 {
-  font-size: 2rem;
-  margin-bottom: 1rem;
-}
-
-ul {
-  list-style-type: none;
-  padding: 0;
-  margin: 0;
-}
-
-li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.5rem;
-  margin-bottom: 0.5rem;
-  background-color: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-}
-
-.content {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  margin-top: 2rem;
-  width: 100%;
-}
-
-.songs {
-  flex: 1;
-  margin-right: 1rem;
-}
-
-.player {
-  flex: 1;
-}
-
-@media (max-width: 768px) {
-  .content {
-    flex-direction: column;
-  }
-
-  .songs {
-    margin-right: 0;
-    margin-bottom: 1rem;
-  }
-}
-
-.login-layer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-}
-
-.app-layer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
 }
