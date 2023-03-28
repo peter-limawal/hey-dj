@@ -13,5 +13,9 @@ Overall, this project allowed me to explore the potential of AI in music curatio
 
 ## Here's a quick demo of Hey DJ!
 
+*Don't forget to unmute the video :)*
+
+*Setup takes a while so skip to 00:50 to see the app in action! Sorry about that :(*
+
 https://user-images.githubusercontent.com/59006829/228125914-c73e2e8c-c400-451f-baa7-b7c36a78b8ee.mp4
 
