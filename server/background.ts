@@ -3,9 +3,9 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import session from 'express-session'
 import SpotifyWebApi from 'spotify-web-api-node'
-import { Configuration, OpenAIApi } from 'openai'
+import { OpenAI } from 'openai'
 
-dotenv.config()
+dotenv.config({ path: '../.env' })
 
 const app = express().disable('x-powered-by')
 const port = process.env.PORT || 5000
@@ -23,9 +23,9 @@ const generateRandomString = function (length: number): string {
 }
 
 // Initialize OpenAI API and Spotify credentials
-const openai = new OpenAIApi(
-  new Configuration({ apiKey: process.env.OPENAI_API_KEY })
-)
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+})
 const spotifyClientID = process.env.SPOTIFY_CLIENT_ID as string
 const spotifyClientSecret = process.env.SPOTIFY_CLIENT_SECRET as string
 const redirectURI = process.env.REDIRECT_URI as string
@@ -161,14 +161,14 @@ async function getSongListFromGPT(input: string): Promise<string[]> {
   console.log('getSongListFromGPT called with input:', input)
 
   try {
-    const gptResponse = await openai.createChatCompletion({
+    const gptResponse = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
         {
           role: 'system',
-          content: `You are an AI that can suggest a list of songs based on user input. Consistently generate a list of 20 songs following the "Song Name - Artist" format. Do not include any additional text, numbering, or variations in the output. Provide the list of songs in the exact format requested:
+          content: `You are an AI that can suggest a list of songs based on user input. Consistently generate a list of 10 songs following the "Song Name - Artist" format. Do not include any additional text, numbering, or variations in the output. Provide the list of songs in the exact format requested:
 
-          List 20 songs below:
+          List 10 songs below:
           
           Song Name - Artist
           Song Name - Artist
@@ -188,9 +188,9 @@ async function getSongListFromGPT(input: string): Promise<string[]> {
     })
 
     // Log the raw response from the GPT API
-    console.log('GPT API response:', gptResponse.data)
+    console.log('GPT API response:', gptResponse)
 
-    const songsText = gptResponse.data.choices[0].message?.content || ''
+    const songsText = gptResponse.choices[0].message?.content || ''
     const songs = songsText
       .split('\n')
       .filter((song: string) => song.trim() !== '')

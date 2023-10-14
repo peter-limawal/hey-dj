@@ -1,4 +1,5 @@
 # Hey DJ
+
 ![bart](https://user-images.githubusercontent.com/59006829/228125953-f4effdc1-c947-42c6-b025-0e8a94a909c9.gif)
 
 Introducing my latest project - an AI music curator that generates playlists based on natural language input! Using React.js and TypeScript for the frontend, and Node.js and Express for the backend, I've developed a sleek and intuitive web app that helps users discover new music that fits their mood and preferences.
@@ -13,9 +14,8 @@ Overall, this project allowed me to explore the potential of AI in music curatio
 
 ## Here's a quick demo of Hey DJ!
 
-*Don't forget to unmute the video :)*
+_Don't forget to unmute the video :)_
 
-*Setup takes a while so skip to 00:50 to see the app in action! Sorry about that :(*
+_Setup takes a while so skip to 00:50 to see the app in action! Sorry about that :(_
 
 https://user-images.githubusercontent.com/59006829/228125914-c73e2e8c-c400-451f-baa7-b7c36a78b8ee.mp4
-
